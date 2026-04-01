@@ -1,6 +1,6 @@
 # hotel-occupancy-prediction
 
-English | [简体中文](readme-cn.md)
+English | [简体中文](README-CN.md)
 
 Hotel Occupancy Prediction System (XGBoost + Go API)
 
