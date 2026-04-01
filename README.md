@@ -92,3 +92,9 @@ Open `http://localhost:8080`
 
 ### Model Metrics
 ![Model Metrics](docs/screenshot/metrics.png)
+
+---
+
+## Results Analysis
+
+👉 [Analysis Page](https://muchen0532.github.io/hotel-occupancy-prediction/analysis/)

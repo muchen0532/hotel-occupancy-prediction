@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Hotel Occupancy Model Analysis | 模型分析</title>
+<style>
+  body { font-family: Arial, sans-serif; line-height: 1.6; padding: 20px; max-width: 900px; margin: auto; }
+  h1,h2,h3 { color: #2c3e50; }
+  img { max-width: 100%; border: 1px solid #ddd; margin: 10px 0; }
+  .section { margin-bottom: 40px; }
+  .subtitle { color: #555; margin-bottom: 5px; }
+  table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+  table, th, td { border: 1px solid #ccc; }
+  th, td { padding: 8px; text-align: center; }
+  .en { color: #34495e; }
+  .zh { color: #16a085; }
+</style>
+</head>
+<body>
+
+<h1>Hotel Occupancy Model Analysis | 模型分析</h1>
+<p>This page summarizes feature importance, holiday heterogeneity, and functional type heatmap of our hotel occupancy prediction system.<br>
+本页面总结酒店入住率预测系统的特征重要性、节假日异质性分析和功能类型热力图。</p>
+
+<div class="section">
+  <h2>1. Global Feature Importance | 全局特征重要性</h2>
+  <img src="global_importance.png" alt="Global Feature Importance">
+  <p class="en">Lag-1d and 7-day rolling mean dominate; weather and calendar features moderate; long lags less but useful.</p>
+  <p class="zh">Lag-1天和7天滚动平均最重要，天气和日历特征影响中等，长期滞后特征贡献较小但仍有用。</p>
+</div>
+
+<div class="section">
+  <h2>2. Holiday Heterogeneity | 节假日异质性分析</h2>
+  <img src="holiday_heterogeneity.png" alt="Holiday Heterogeneity">
+  <p class="en">Holiday effect varies across hotel types: positive for transport hubs and CBD business hotels, slightly negative for suburban tourism, urban leisure, and education/tech.</p>
+  <p class="zh">节假日效应在不同酒店类型间差异明显：对交通枢纽和CBD商务酒店为正向影响，对郊区旅游酒店、城市休闲酒店和教育/科技酒店为轻微负向影响。</p>
+</div>
+
+<div class="section">
+  <h2>3. Functional Type Heatmap | 功能类型热力图</h2>
+  <img src="functype_heatmap.png" alt="Functional Type Heatmap">
+  <p class="en">Shows feature importance across hotel types; identifies consistent vs type-specific features; guides targeted improvements.</p>
+  <p class="zh">显示不同酒店功能类型特征重要性；区分全局重要和类型特定特征；指导模型优化方向。</p>
+</div>
+
+<div class="section">
+  <h2>Key Ablation Results | 消融实验结果</h2>
+  <table>
+    <tr>
+      <th>Model</th><th>MAE</th><th>RMSE</th><th>sMAPE</th>
+    </tr>
+    <tr><td>xgb_full</td><td>4.32</td><td>5.87</td><td>14.99</td></tr>
+    <tr><td>xgb_w/o_lag</td><td>5.27</td><td>7.22</td><td>17.46</td></tr>
+    <tr><td>xgb_w/o_rolling</td><td>4.37</td><td>5.92</td><td>15.45</td></tr>
+    <tr><td>perhotel_xgb</td><td>5.83</td><td>7.73</td><td>17.89</td></tr>
+    <tr><td>arima</td><td>9.37</td><td>11.33</td><td>25.83</td></tr>
+  </table>
+  <p class="en">
+Ablation study highlights the importance of lag and rolling features. Removing lag increases MAE from 4.32 to 5.27, while omitting rolling averages moderately worsens performance. Per-hotel XGBoost models underperform the global model, and ARIMA performs the worst overall.
+</p>
+  <p class="zh">
+消融实验凸显了滞后和滚动特征的重要性。去掉滞后特征会使MAE从4.32增加到了5.27，而去掉滚动平均特征会造成适度性能下降。每酒店XGBoost模型表现不如全局模型，ARIMA整体最差。
+</p>
+</div>
+
+</body>
+</html>
