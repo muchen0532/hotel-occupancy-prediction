@@ -95,3 +95,8 @@ go run cmd/server/main.go -python <venv>/python.exe
 
 ![模型指标](docs/screenshot/metrics.png)
 
+---
+
+## 结果分析
+
+👉 [Analysis Page](https://muchen0532.github.io/hotel-occupancy-prediction/analysis/)
