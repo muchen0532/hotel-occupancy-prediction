@@ -1,0 +1,9 @@
+server:
+  port: "8080"
+  mode: release          # debug / release
+
+models_dir: "./models"   # 相对于可执行文件的路径
+
+python:
+  executable: "python"   # Windows 上可能需要改为 python3 或完整路径
+                         # 例如: "D:/project-python/hotel_occupancy_prediction/venv/Scripts/python.exe"

@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>酒店入住率预测系统</title>
+<style>
+  :root {
+    --primary: #1a56db; --primary-dark: #1342b0;
+    --bg: #f8fafc; --card: #ffffff;
+    --border: #e2e8f0; --text: #1e293b; --muted: #64748b;
+    --success: #10b981; --warn: #f59e0b; --danger: #ef4444;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+         background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* ── 顶栏 ── */
+  header { background: var(--primary); color: #fff; padding: 16px 32px;
+           display: flex; align-items: center; gap: 12px;
+           box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+  header h1 { font-size: 1.2rem; font-weight: 600; }
+  .badge { background: rgba(255,255,255,.2); border-radius: 12px;
+           padding: 2px 10px; font-size: .75rem; }
+
+  /* ── 布局 ── */
+  .layout { display: grid; grid-template-columns: 320px 1fr; gap: 20px;
+            max-width: 1280px; margin: 24px auto; padding: 0 24px; }
+  @media(max-width:900px){ .layout{ grid-template-columns:1fr; } }
+
+  /* ── 卡片 ── */
+  .card { background: var(--card); border: 1px solid var(--border);
+          border-radius: 12px; padding: 20px;
+          box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .card h2 { font-size: .875rem; font-weight: 600; color: var(--muted);
+             text-transform: uppercase; letter-spacing: .05em; margin-bottom: 14px; }
+
+  /* ── 表单 ── */
+  .field { margin-bottom: 14px; }
+  label { display: block; font-size: .8rem; font-weight: 500;
+          color: var(--muted); margin-bottom: 4px; }
+  input, select { width: 100%; padding: 8px 12px; border: 1px solid var(--border);
+                  border-radius: 8px; font-size: .875rem; outline: none;
+                  transition: border-color .15s; }
+  input:focus, select:focus { border-color: var(--primary); }
+
+  .checkgroup { display: flex; gap: 8px; flex-wrap: wrap; }
+  .checkgroup label { display: flex; align-items: center; gap: 4px;
+                      font-size: .85rem; font-weight: 400; color: var(--text);
+                      cursor: pointer; }
+  .checkgroup input[type=checkbox] { width: auto; }
+
+  button.primary { width: 100%; padding: 10px; background: var(--primary);
+                   color: #fff; border: none; border-radius: 8px;
+                   font-size: .9rem; font-weight: 600; cursor: pointer;
+                   transition: background .15s; margin-top: 4px; }
+  button.primary:hover { background: var(--primary-dark); }
+  button.primary:disabled { background: #94a3b8; cursor: not-allowed; }
+
+  /* ── 标签页 ── */
+  .tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 2px solid var(--border); }
+  .tab  { padding: 8px 16px; border: none; background: none; cursor: pointer;
+          font-size: .875rem; color: var(--muted); border-bottom: 2px solid transparent;
+          margin-bottom: -2px; transition: all .15s; border-radius: 6px 6px 0 0; }
+  .tab.active { color: var(--primary); border-bottom-color: var(--primary);
+                font-weight: 600; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── 结果 ── */
+  .result-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(180px,1fr));
+                 gap: 12px; margin-top: 8px; }
+  .model-card { background: var(--bg); border: 1px solid var(--border);
+                border-radius: 10px; padding: 14px; text-align: center; }
+  .model-card .model-name { font-size: .75rem; font-weight: 600; color: var(--muted);
+                             text-transform: uppercase; letter-spacing: .05em; }
+  .model-card .pred-value { font-size: 2rem; font-weight: 700; color: var(--primary);
+                             line-height: 1.2; margin: 6px 0; }
+  .model-card .pred-unit  { font-size: .72rem; color: var(--muted); }
+  .model-card.error .pred-value { font-size: 1rem; color: var(--danger); }
+
+  /* ── 表格 ── */
+  table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+  th { background: var(--bg); font-weight: 600; color: var(--muted);
+       padding: 8px 10px; text-align: left; border-bottom: 2px solid var(--border); }
+  td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  tr:hover td { background: #f1f5f9; }
+
+  /* ── 历史图表 ── */
+  .chart-wrap { height: 220px; margin-top: 8px; position: relative; }
+  canvas { width: 100% !important; height: 100% !important; }
+
+  /* ── 状态标签 ── */
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 10px;
+         font-size: .72rem; font-weight: 600; }
+  .tag.good  { background: #d1fae5; color: #065f46; }
+  .tag.mid   { background: #fef3c7; color: #92400e; }
+  .tag.low   { background: #fee2e2; color: #991b1b; }
+
+  /* ── 空/加载 ── */
+  .empty { text-align: center; color: var(--muted); padding: 40px;
+           font-size: .875rem; }
+  .spinner { display: inline-block; width: 18px; height: 18px;
+             border: 2px solid rgba(255,255,255,.4); border-top-color: #fff;
+             border-radius: 50%; animation: spin .6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<header>
+  <span style="font-size:1.4rem">🏨</span>
+  <h1>酒店入住率预测系统</h1>
+  <span class="badge" id="healthBadge">检查中...</span>
+</header>
+
+<div class="layout">
+
+  <!-- ── 左侧控制面板 ── -->
+  <aside>
+    <div class="card">
+      <h2>预测参数</h2>
+
+      <div class="field">
+        <label>酒店 ID</label>
+        <select id="hotelSelect"><option value="">-- 加载中 --</option></select>
+      </div>
+
+      <div class="field">
+        <label>预测日期</label>
+        <input type="date" id="dateInput">
+      </div>
+
+      <div class="field">
+        <label>选择模型</label>
+        <div class="checkgroup">
+          <label><input type="checkbox" value="arima"       checked> ARIMA</label>
+          <label><input type="checkbox" value="xgboost"     checked> XGBoost</label>
+        </div>
+      </div>
+
+      <button class="primary" id="btnPredict">预测</button>
+    </div>
+
+  </aside>
+
+  <!-- ── 右侧结果区 ── -->
+  <main>
+    <div class="card">
+      <div class="tabs">
+        <button class="tab active" data-tab="single">预测结果</button>
+        <button class="tab" data-tab="history">历史数据</button>
+        <button class="tab" data-tab="metrics">模型指标</button>
+      </div>
+
+      <div class="tab-panel active" id="tab-single">
+        <div id="singleResult" class="empty">请在左侧输入参数后点击预测</div>
+      </div>
+
+      <!-- 历史数据 -->
+      <div class="tab-panel" id="tab-history">
+        <div style="display:flex;gap:8px;margin-bottom:12px;align-items:flex-end">
+          <div class="field" style="margin:0;flex:1">
+            <label>开始日期</label>
+            <input type="date" id="histStart" value="2025-10-01">
+          </div>
+          <div class="field" style="margin:0;flex:1">
+            <label>结束日期</label>
+            <input type="date" id="histEnd" value="2025-12-01">
+          </div>
+          <button class="primary" style="width:auto;padding:8px 18px"
+                  id="btnHistory">查询</button>
+        </div>
+        <div class="chart-wrap"><canvas id="histChart"></canvas></div>
+        <div id="histTable" style="margin-top:12px"></div>
+      </div>
+
+      <!-- 模型指标 -->
+      <div class="tab-panel" id="tab-metrics">
+        <div style="margin-bottom:10px">
+          <select id="metricsFilter" style="width:auto;padding:6px 10px">
+            <option value="">全部模型</option>
+            <option value="arima">ARIMA</option>
+            <option value="xgb">XGBoost</option>
+          </select>
+          <button class="primary" style="width:auto;padding:6px 18px;margin-left:8px"
+                  id="btnMetrics">查询</button>
+        </div>
+        <div id="metricsResult" class="empty">点击查询加载指标</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const API = '/api';
+let histChart = null;
+
+// ── 标签页切换 ──────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab,.tab-panel').forEach(el => el.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+// ── 健康检查 ────────────────────────────────────────────
+async function checkHealth() {
+  try {
+    const r = await fetch(`${API}/health`);
+    const d = await r.json();
+    const el = document.getElementById('healthBadge');
+    if (d.status === 'ok') {
+      el.textContent = `在线 · ${d.n_hotels} 家酒店`;
+      el.style.background = 'rgba(16,185,129,.3)';
+    } else {
+      el.textContent = '异常';
+      el.style.background = 'rgba(239,68,68,.3)';
+    }
+  } catch(e) {
+    document.getElementById('healthBadge').textContent = '离线';
+  }
+}
+checkHealth();
+
+// ── 加载酒店列表 ────────────────────────────────────────
+async function loadHotels() {
+  try {
+    const r = await fetch(`${API}/hotels`);
+    const d = await r.json();
+    const sel = document.getElementById('hotelSelect');
+    sel.innerHTML = '<option value="">-- 选择酒店 --</option>';
+    d.hotels.sort((a,b) => a.hotel_id.localeCompare(b.hotel_id)).forEach(h => {
+      const opt = document.createElement('option');
+      opt.value = h.hotel_id;
+      opt.textContent = `${h.hotel_id.slice(0,8)}… [${h.brand_tier}·${h.district_functional_tier}]`;
+      sel.appendChild(opt);
+    });
+  } catch(e) { console.error('hotels:', e); }
+}
+loadHotels();
+
+const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate()+1);
+const fmt = d => d.toISOString().slice(0,10);
+document.getElementById('dateInput').value = fmt(tomorrow);
+
+document.getElementById('btnPredict').addEventListener('click', async () => {
+  const hotelID = document.getElementById('hotelSelect').value;
+  const date    = document.getElementById('dateInput').value;
+  const models  = [...document.querySelectorAll('.checkgroup input:checked')].map(c => c.value);
+
+  if (!hotelID) { alert('请选择酒店'); return; }
+  if (!date)    { alert('请选择日期'); return; }
+  if (!models.length) { alert('请至少选择一个模型'); return; }
+
+  const btn = document.getElementById('btnPredict');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+
+  try {
+    const r = await fetch(`${API}/predict`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({hotel_id: hotelID, date, models})
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error);
+    renderSingle(d);
+
+    // 切到预测标签
+    document.querySelectorAll('.tab,.tab-panel').forEach(el => el.classList.remove('active'));
+    document.querySelector('[data-tab="single"]').classList.add('active');
+    document.getElementById('tab-single').classList.add('active');
+  } catch(e) {
+    document.getElementById('singleResult').innerHTML =
+      `<div class="empty" style="color:var(--danger)">❌ ${e.message}</div>`;
+  } finally {
+    btn.disabled = false; btn.textContent = '预测';
+  }
+});
+
+function renderSingle(d) {
+  const meta = d.hotel_meta || {};
+  let html = `
+    <div style="margin-bottom:14px;padding:12px;background:var(--bg);border-radius:8px">
+      <div style="font-size:.8rem;color:var(--muted)">
+        <b>${d.hotel_id}</b> &nbsp;|&nbsp;
+        ${meta.brand_tier||''} &nbsp;·&nbsp; ${meta.district_functional_tier||''} &nbsp;·&nbsp;
+        ${meta.hotel_district||''}
+      </div>
+      <div style="font-size:.82rem;margin-top:4px;color:var(--muted)">预测日期：<b style="color:var(--text)">${d.date}</b></div>
+    </div>
+    <div class="result-grid">`;
+
+  d.predictions.forEach(p => {
+    const isErr = p.prediction < 0;
+    const val   = isErr ? '—' : p.prediction.toFixed(1) + '%';
+    const tag   = !isErr ? (p.prediction >= 70 ? 'good' : p.prediction >= 40 ? 'mid' : 'low') : '';
+    html += `
+      <div class="model-card ${isErr?'error':''}">
+        <div class="model-name">${p.model}</div>
+        <div class="pred-value">${val}</div>
+        <div class="pred-unit">${isErr ? p.unit : '预测入住率'}</div>
+        ${!isErr ? `<span class="tag ${tag}" style="margin-top:6px">
+          ${p.prediction>=70?'高':''}${p.prediction>=40&&p.prediction<70?'中':''}${p.prediction<40?'低':''}入住</span>` : ''}
+      </div>`;
+  });
+  html += '</div>';
+  document.getElementById('singleResult').innerHTML = html;
+}
+
+
+function renderBatch(d, models) {
+  if (!d.results || !d.results.length) {
+    document.getElementById('batchResult').innerHTML = '<div class="empty">无结果</div>';
+    return;
+  }
+  let head = '<tr><th>酒店ID</th><th>品牌</th><th>功能区</th>';
+  models.forEach(m => head += `<th>${m}</th>`);
+  head += '</tr>';
+
+  let rows = '';
+  d.results.forEach(r => {
+    const meta = r.hotel_meta || {};
+    let row = `<tr><td style="font-family:monospace;font-size:.75rem">${r.hotel_id.slice(0,12)}…</td>
+      <td>${meta.brand_tier||''}</td><td>${(meta.district_functional_tier||'').replace('_','\xa0')}</td>`;
+    const predMap = {};
+    r.predictions.forEach(p => predMap[p.model] = p);
+    models.forEach(m => {
+      const p = predMap[m];
+      if (!p || p.prediction < 0) { row += '<td>—</td>'; return; }
+      const cls = p.prediction>=70?'good':p.prediction>=40?'mid':'low';
+      row += `<td><span class="tag ${cls}">${p.prediction.toFixed(1)}%</span></td>`;
+    });
+    rows += row + '</tr>';
+  });
+
+  let errHtml = '';
+  if (d.errors && d.errors.length) {
+    errHtml = `<div style="margin-top:10px;color:var(--danger);font-size:.8rem">
+      ❌ 失败: ${d.errors.map(e=>`${e.hotel_id}(${e.error})`).join(', ')}</div>`;
+  }
+
+  document.getElementById('batchResult').innerHTML =
+    `<table><thead>${head}</thead><tbody>${rows}</tbody></table>${errHtml}`;
+}
+
+// ── 历史数据 ────────────────────────────────────────────
+document.getElementById('btnHistory').addEventListener('click', loadHistory);
+
+async function loadHistory() {
+  const hotelID = document.getElementById('hotelSelect').value;
+  if (!hotelID) { alert('请先选择酒店'); return; }
+
+  const start = document.getElementById('histStart').value;
+  const end   = document.getElementById('histEnd').value;
+  let url = `${API}/history?hotel_id=${hotelID}`;
+  if (start) url += `&start=${start}`;
+  if (end)   url += `&end=${end}`;
+
+  try {
+    const r = await fetch(url);
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error);
+    renderHistory(d);
+  } catch(e) {
+    document.getElementById('histTable').innerHTML =
+      `<div class="empty" style="color:var(--danger)">❌ ${e.message}</div>`;
+  }
+}
+
+function renderHistory(d) {
+  const records = d.records || [];
+  if (!records.length) {
+    document.getElementById('histTable').innerHTML = '<div class="empty">无历史数据</div>';
+    return;
+  }
+
+  // 图表
+  const labels = records.map(r => r.record_date);
+  const values = records.map(r => r.occupancy_rate);
+
+  if (histChart) histChart.destroy();
+  const ctx = document.getElementById('histChart').getContext('2d');
+  histChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: '实际入住率 %',
+        data: values,
+        borderColor: '#1a56db',
+        backgroundColor: 'rgba(26,86,219,.08)',
+        borderWidth: 1.5,
+        pointRadius: 0,
+        tension: 0.3,
+        fill: true,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { maxTicksLimit: 12, font: { size: 10 } } },
+        y: { min: 0, max: 100, ticks: { font: { size: 10 } } }
+      }
+    }
+  });
+
+  // 最近20条表格
+  const recent = records.slice(-20).reverse();
+  let rows = recent.map(r => `<tr>
+    <td>${r.record_date}</td>
+    <td><b>${r.occupancy_rate.toFixed(1)}%</b></td>
+    <td><span class="tag ${r.occupancy_rate>=70?'good':r.occupancy_rate>=40?'mid':'low'}">
+      ${r.occupancy_rate>=70?'高':r.occupancy_rate>=40?'中':'低'}</span></td>
+  </tr>`).join('');
+
+  document.getElementById('histTable').innerHTML = `
+    <div style="font-size:.8rem;color:var(--muted);margin-bottom:6px">
+      共 ${records.length} 条记录，显示最近20条</div>
+    <table>
+      <thead><tr><th>日期</th><th>入住率</th><th>级别</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+// ── 模型指标 ────────────────────────────────────────────
+document.getElementById('btnMetrics').addEventListener('click', loadMetrics);
+loadMetrics(); // 自动加载
+
+async function loadMetrics() {
+  const filter = document.getElementById('metricsFilter').value;
+  let url = `${API}/metrics`;
+  if (filter) url += `?model=${filter}`;
+
+  try {
+    const r = await fetch(url);
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error);
+
+    let rows = d.summary.map(m => `<tr>
+      <td><b>${m.model}</b></td>
+      <td>${m.MAE_mean.toFixed(3)}</td>
+      <td>${(m.MAE_std||0).toFixed(3)}</td>
+      <td>${m.RMSE_mean.toFixed(3)}</td>
+      <td>${m.sMAPE_mean.toFixed(2)}%</td>
+      <td>${m.n_hotels}</td>
+    </tr>`).join('');
+
+    document.getElementById('metricsResult').innerHTML = `
+      <div style="font-size:.8rem;color:var(--muted);margin-bottom:8px">
+        测试集: ${d.test_start} 起 · ${d.n_hotels} 家酒店</div>
+      <table>
+        <thead><tr><th>模型</th><th>MAE均值</th><th>MAE标准差</th>
+          <th>RMSE均值</th><th>sMAPE均值</th><th>酒店数</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  } catch(e) {
+    document.getElementById('metricsResult').innerHTML =
+      `<div class="empty" style="color:var(--danger)">❌ ${e.message}</div>`;
+  }
+}
+</script>
+</body>
+</html>
