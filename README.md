@@ -4,6 +4,8 @@ English | [简体中文](README-CN.md)
 
 Hotel Occupancy Prediction System (XGBoost + Go API)
 
+一个实用的酒店入住率时间序列预测系统。
+
 ---
 
 ## Overview
